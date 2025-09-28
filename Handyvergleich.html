@@ -371,13 +371,15 @@
       const upfront = Number(contract.upfront) || 0;
       const duration = Number(contract.duration) || 0;
       const bonus = Number(contract.bonus) || 0;
+      const connectionFeeAmount = Number(contract.connectionFeeAmount) || 0;
 
-      const total = monthly * duration + upfront - bonus;
+      const total = monthly * duration + upfront + connectionFeeAmount - bonus;
 
       contract.monthly = monthly;
       contract.upfront = upfront;
       contract.duration = duration;
       contract.bonus = bonus;
+      contract.connectionFeeAmount = connectionFeeAmount;
       contract.total = total;
       contract.effective = duration ? total / duration : 0;
     }
@@ -487,6 +489,10 @@
         dataTag.textContent = `${dataText}${contract.flat === 'ja' ? ' · Allnet-Flat' : ''}`;
 
         row.querySelector('.monthly').textContent = euro.format(contract.monthly);
+        const bonusValue = Number(contract.bonus) || 0;
+        row.querySelector('.bonus').textContent = bonusValue
+          ? `− ${euro.format(bonusValue)}`
+          : '—';
         const upfrontSum = (contract.upfront || 0) + (contract.connectionFeeAmount || 0);
         row.querySelector('.upfront').textContent = euro.format(upfrontSum);
 
@@ -570,6 +576,8 @@
       const upfront = Number(formData.get('upfront')) || 0;
       const duration = Number(formData.get('duration')) || 0;
       const bonus = Number(formData.get('bonus')) || 0;
+      const connectionFeeAmount = formData.get('connectionFee') ? 40 : 0;
+
       let device = formData.get('device') || '';
       const link = (formData.get('link') || '').trim();
 
@@ -588,15 +596,9 @@
         }
       }
 
-
-      const connectionFeeAmount = formData.get('connectionFee') ? 40 : 0;
-
-      const total = monthly * duration + upfront + connectionFeeAmount;
-      const effective = total / duration;
-
-      contracts.push({
-        provider: formData.get('provider').trim(),
-        plan: formData.get('plan').trim(),
+      const newContract = {
+        provider: (formData.get('provider') || '').trim(),
+        plan: (formData.get('plan') || '').trim(),
         monthly,
         upfront,
         duration,
@@ -606,17 +608,11 @@
         device,
         link,
         notes: (formData.get('notes') || '').trim(),
-
-        total,
-        effective,
         connectionFeeAmount,
-      });
-
       };
 
       updateContractCalculations(newContract);
       contracts.push(newContract);
-
 
       saveContracts();
 
