@@ -770,6 +770,66 @@
 
     function renderImportPreview(entries) {
       importPreviewBody.innerHTML = '';
+
+      const currencyFormatter = new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: 'EUR',
+      });
+
+      const parseEssentialNumber = value => {
+        const normalized = toNumberString(value);
+        if (!normalized) {
+          return NaN;
+        }
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : NaN;
+      };
+
+      const parseOptionalNumber = value => {
+        const normalized = toNumberString(value);
+        if (!normalized) {
+          return 0;
+        }
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : NaN;
+      };
+
+      const computedValues = entries.map(entry => {
+        const monthly = parseEssentialNumber(entry.monatlich);
+        const duration = parseEssentialNumber(entry.laufzeit);
+        const upfront = parseOptionalNumber(entry.einmalig);
+        const bonus = parseOptionalNumber(entry.bonus);
+        const connectionFee = parseOptionalNumber(entry.anschluss);
+
+        const totalCost = monthly * duration + upfront + connectionFee - bonus;
+        const effectiveMonthly =
+          Number.isFinite(totalCost) && Number.isFinite(duration) && duration !== 0
+            ? totalCost / duration
+            : NaN;
+
+        return { totalCost, effectiveMonthly };
+      });
+
+      const validTotals = computedValues
+        .map(value => value.totalCost)
+        .filter(value => Number.isFinite(value));
+      const validEffectives = computedValues
+        .map(value => value.effectiveMonthly)
+        .filter(value => Number.isFinite(value));
+
+      const averageTotal =
+        validTotals.length > 0
+          ? validTotals.reduce((sum, value) => sum + value, 0) / validTotals.length
+          : NaN;
+      const averageEffective =
+        validEffectives.length > 0
+          ? validEffectives.reduce((sum, value) => sum + value, 0) /
+            validEffectives.length
+          : NaN;
+
+      const formatCurrency = value =>
+        Number.isFinite(value) ? currencyFormatter.format(value) : '—';
+
       entries.forEach((entry, entryIndex) => {
         if (entries.length > 1) {
           const headerRow = document.createElement('tr');
@@ -790,6 +850,30 @@
           row.append(labelCell, valueCell);
           importPreviewBody.appendChild(row);
         });
+
+        const { totalCost, effectiveMonthly } = computedValues[entryIndex];
+
+        const appendCalculationRow = (label, value, average) => {
+          const row = document.createElement('tr');
+          const labelCell = document.createElement('td');
+          labelCell.textContent = label;
+          const valueCell = document.createElement('td');
+          valueCell.textContent = formatCurrency(value);
+          row.append(labelCell, valueCell);
+
+          if (
+            Number.isFinite(value) &&
+            Number.isFinite(average) &&
+            value < average
+          ) {
+            row.style.backgroundColor = 'rgba(0, 200, 0, 0.1)';
+          }
+
+          importPreviewBody.appendChild(row);
+        };
+
+        appendCalculationRow('Gesamtkosten (über Laufzeit)', totalCost, averageTotal);
+        appendCalculationRow('Effektiv pro Monat', effectiveMonthly, averageEffective);
       });
 
       if (importConfirm) {
