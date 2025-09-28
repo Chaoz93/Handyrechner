@@ -171,6 +171,10 @@
       text-align: center;
       color: var(--text-muted);
     }
+
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -220,6 +224,22 @@
             </select>
           </label>
         </div>
+        <div class="grid two">
+          <label>
+            Handy
+            <select name="device" id="device-select"></select>
+          </label>
+          <label>
+            Direktlink
+            <input type="url" name="link" placeholder="https://…" />
+          </label>
+        </div>
+        <div id="new-device-wrapper" class="hidden">
+          <label>
+            Neues Handy speichern
+            <input type="text" id="new-device-input" placeholder="z.B. iPhone 15" />
+          </label>
+        </div>
         <div>
           <label>
             Notizen
@@ -262,6 +282,7 @@
               <th>Monatlich</th>
               <th>Einmalig</th>
               <th>Laufzeit</th>
+              <th>Handy</th>
               <th>Gesamtkosten</th>
               <th>Effektiv / Monat</th>
               <th>Details</th>
@@ -284,6 +305,7 @@
       <td class="monthly"></td>
       <td class="upfront"></td>
       <td class="duration"></td>
+      <td class="device"></td>
       <td class="total"></td>
       <td class="effective"></td>
       <td class="notes"></td>
@@ -295,8 +317,80 @@
     const overview = document.getElementById('overview');
     const tableTemplate = document.getElementById('table-template');
     const rowTemplate = document.getElementById('row-template');
+    const deviceSelect = document.getElementById('device-select');
+    const newDeviceWrapper = document.getElementById('new-device-wrapper');
+    const newDeviceInput = document.getElementById('new-device-input');
 
     const contracts = [];
+
+    const deviceStorageKey = 'handyrechner-devices';
+    let devices = [];
+
+    try {
+      const storedDevices = localStorage.getItem(deviceStorageKey);
+      if (storedDevices) {
+        const parsed = JSON.parse(storedDevices);
+        if (Array.isArray(parsed)) {
+          devices = parsed
+            .map(device => (typeof device === 'string' ? device.trim() : ''))
+            .filter(device => device);
+        }
+      }
+    } catch (error) {
+      console.warn('Gespeicherte Geräte konnten nicht geladen werden.', error);
+    }
+
+    function saveDevices() {
+      try {
+        localStorage.setItem(deviceStorageKey, JSON.stringify(devices));
+      } catch (error) {
+        console.warn('Geräteliste konnte nicht gespeichert werden.', error);
+      }
+    }
+
+    function populateDeviceOptions(selected = '') {
+      deviceSelect.innerHTML = '';
+
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Handy wählen (optional)';
+      deviceSelect.appendChild(placeholder);
+
+      devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device;
+        option.textContent = device;
+        deviceSelect.appendChild(option);
+      });
+
+      const createOption = document.createElement('option');
+      createOption.value = '__new__';
+      createOption.textContent = 'Neues Handy hinzufügen…';
+      deviceSelect.appendChild(createOption);
+
+      const availableOption = Array.from(deviceSelect.options).find(
+        option => option.value === selected
+      );
+
+      deviceSelect.value = availableOption ? selected : '';
+    }
+
+    function showNewDeviceInput(show) {
+      if (show) {
+        newDeviceWrapper.classList.remove('hidden');
+        newDeviceInput.focus();
+      } else {
+        newDeviceWrapper.classList.add('hidden');
+        newDeviceInput.value = '';
+      }
+    }
+
+    deviceSelect.addEventListener('change', () => {
+      showNewDeviceInput(deviceSelect.value === '__new__');
+    });
+
+    populateDeviceOptions();
+    showNewDeviceInput(false);
 
     const euro = new Intl.NumberFormat('de-DE', {
       style: 'currency',
@@ -334,7 +428,35 @@
         row.querySelector('.duration').textContent = `${contract.duration} Monate`;
         row.querySelector('.total').textContent = euro.format(contract.total);
         row.querySelector('.effective').textContent = euro.format(contract.effective);
-        row.querySelector('.notes').textContent = contract.notes || '—';
+        row.querySelector('.device').textContent = contract.device || '—';
+
+        const notesCell = row.querySelector('.notes');
+        notesCell.innerHTML = '';
+        let hasDetails = false;
+
+        if (contract.link) {
+          const linkEl = document.createElement('a');
+          linkEl.href = contract.link;
+          linkEl.target = '_blank';
+          linkEl.rel = 'noopener';
+          linkEl.textContent = 'Direktlink';
+          notesCell.appendChild(linkEl);
+          hasDetails = true;
+        }
+
+        if (contract.notes) {
+          if (hasDetails) {
+            notesCell.appendChild(document.createElement('br'));
+          }
+          const notesText = document.createElement('span');
+          notesText.textContent = contract.notes;
+          notesCell.appendChild(notesText);
+          hasDetails = true;
+        }
+
+        if (!hasDetails) {
+          notesCell.textContent = '—';
+        }
 
         tbody.appendChild(row);
 
@@ -375,6 +497,23 @@
       const monthly = Number(formData.get('monthly')) || 0;
       const upfront = Number(formData.get('upfront')) || 0;
       const duration = Number(formData.get('duration')) || 0;
+      let device = formData.get('device') || '';
+      const link = (formData.get('link') || '').trim();
+
+      if (device === '__new__') {
+        const newDevice = newDeviceInput.value.trim();
+        if (newDevice) {
+          if (!devices.includes(newDevice)) {
+            devices.push(newDevice);
+            devices.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+            saveDevices();
+          }
+          device = newDevice;
+          populateDeviceOptions(device);
+        } else {
+          device = '';
+        }
+      }
 
       const total = monthly * duration + upfront;
       const effective = total / duration;
@@ -387,12 +526,17 @@
         duration,
         data: formData.get('data'),
         flat: formData.get('flat'),
-        notes: formData.get('notes').trim(),
+        device,
+        link,
+        notes: (formData.get('notes') || '').trim(),
         total,
         effective,
       });
 
       form.reset();
+      populateDeviceOptions(device);
+      showNewDeviceInput(false);
+
       render();
     });
   </script>
