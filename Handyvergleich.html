@@ -161,6 +161,19 @@
       color: var(--primary-dark);
     }
 
+    .button-danger {
+      background: rgba(198, 40, 40, 0.12);
+      color: #8c1d1d;
+      border: 1px solid rgba(198, 40, 40, 0.35);
+      box-shadow: none;
+    }
+
+    .button-danger:hover {
+      background: rgba(198, 40, 40, 0.2);
+      color: #6a1111;
+      box-shadow: none;
+    }
+
     .button-small {
       padding: 6px 12px;
       font-size: 0.85rem;
@@ -623,7 +636,10 @@
       <td class="effective"></td>
       <td class="notes"></td>
       <td class="actions">
-        <button type="button" class="button-ghost button-small edit-button">Bearbeiten</button>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" class="button-ghost button-small edit-button">Bearbeiten</button>
+          <button type="button" class="button-danger button-small delete-button">Löschen</button>
+        </div>
       </td>
     </tr>
   </template>
@@ -1181,6 +1197,11 @@
           editButton.addEventListener('click', () => startEdit(index));
         }
 
+        const deleteButton = row.querySelector('.delete-button');
+        if (deleteButton) {
+          deleteButton.addEventListener('click', () => deleteContract(index));
+        }
+
         tbody.appendChild(row);
 
         monthlySum += contract.effective;
@@ -1259,6 +1280,34 @@
       submitButton.textContent = 'Vertrag aktualisieren';
       cancelEditButton.classList.remove('hidden');
       form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      render();
+    }
+
+    function deleteContract(index) {
+      const contract = contracts[index];
+      if (!contract) {
+        return;
+      }
+
+      const provider = contract.provider || 'Unbekannter Anbieter';
+      const plan = contract.plan || 'Unbekannter Tarif';
+      const message = `Soll der Tarif "${provider} – ${plan}" wirklich gelöscht werden?`;
+
+      if (!window.confirm(message)) {
+        return;
+      }
+
+      contracts.splice(index, 1);
+
+      if (editingIndex !== null) {
+        if (editingIndex === index) {
+          resetFormState();
+        } else if (editingIndex > index) {
+          editingIndex -= 1;
+        }
+      }
+
+      saveContracts();
       render();
     }
 
