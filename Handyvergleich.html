@@ -186,53 +186,8 @@
       margin-top: 8px;
     }
 
-    td.actions {
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    tbody tr.editing {
+    .table-row.editing {
       box-shadow: inset 0 0 0 2px rgba(47, 89, 209, 0.25);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    thead th {
-      text-align: left;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      padding-bottom: 10px;
-    }
-
-    tbody td {
-      padding: 16px 0;
-      border-top: 1px solid var(--border);
-      font-size: 0.95rem;
-    }
-
-    tbody tr.highlight {
-      background: rgba(47, 89, 209, 0.08);
-    }
-
-    tbody tr.selectable {
-      cursor: pointer;
-      transition: background 0.2s ease, outline 0.2s ease;
-    }
-
-    tbody tr.selectable:hover {
-      background: rgba(47, 89, 209, 0.08);
-    }
-
-    tbody tr.selected {
-      outline: 2px solid var(--primary);
-      outline-offset: -2px;
-      background: rgba(47, 89, 209, 0.12);
     }
 
     .tag {
@@ -285,59 +240,335 @@
       background: rgba(255, 255, 255, 0.55);
     }
 
-    td.notes {
-      min-width: 220px;
-    }
-
-    .note-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
+    .comparison-table {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      width: 100%;
+      gap: 0;
     }
 
-    .note-item {
+    .table-row {
+      display: grid;
+      grid-template-columns:
+        minmax(240px, 2.2fr)
+        minmax(200px, 1.7fr)
+        repeat(4, minmax(80px, 0.85fr))
+        minmax(150px, 1.1fr)
+        minmax(160px, 1.1fr)
+        minmax(72px, 0.7fr)
+        minmax(140px, 0.95fr);
+      grid-template-areas:
+        'provider device monthly upfront bonus duration total effective details actions';
+      column-gap: 16px;
+      align-items: stretch;
+    }
+
+    .table-row.table-header {
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-row.table-header .cell {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      justify-content: flex-start;
+    }
+
+    .table-body {
       display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      font-size: 0.9rem;
-      color: #1b1f2a;
+      flex-direction: column;
+      width: 100%;
     }
 
-    .note-icon {
+    .table-body .table-row {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .table-body .table-row:last-child {
+      border-bottom: none;
+    }
+
+    .table-row.selectable:hover {
+      background: rgba(47, 89, 209, 0.06);
+    }
+
+    .table-row.highlight:not(.selected) {
+      background: rgba(47, 89, 209, 0.08);
+    }
+
+    .table-row.selected {
+      outline: 2px solid var(--primary);
+      outline-offset: -2px;
+      background: rgba(47, 89, 209, 0.12);
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      min-height: 44px;
       font-size: 0.95rem;
       line-height: 1.4;
     }
 
-    .note-link {
+    .cell--provider {
+      grid-area: provider;
+    }
+
+    .cell--device {
+      grid-area: device;
+    }
+
+    .cell--monthly,
+    .cell--upfront,
+    .cell--bonus,
+    .cell--duration {
+      justify-content: center;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .cell--monthly {
+      grid-area: monthly;
+    }
+
+    .cell--upfront {
+      grid-area: upfront;
+    }
+
+    .cell--bonus {
+      grid-area: bonus;
+    }
+
+    .cell--duration {
+      grid-area: duration;
+    }
+
+    .cell--total {
+      grid-area: total;
+      justify-content: center;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.1rem;
       color: var(--primary-dark);
-      font-weight: 600;
-      text-decoration: none;
     }
 
-    .note-link:hover,
-    .note-link:focus {
-      text-decoration: underline;
+    .cell--effective {
+      grid-area: effective;
+      justify-content: center;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary-dark);
     }
 
-    .note-badge {
+    .cell--details {
+      grid-area: details;
+      justify-content: center;
+    }
+
+    .cell--actions {
+      grid-area: actions;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .provider-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .provider-stack .name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .actions-group {
+      display: inline-flex;
+      gap: 8px;
+    }
+
+    .details-button {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(47, 89, 209, 0.12);
+      color: var(--primary-dark);
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(47, 89, 209, 0.15);
-      color: var(--primary-dark);
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
+      justify-content: center;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
     }
 
-    .note-text {
-      line-height: 1.4;
+    .details-button:hover,
+    .details-button:focus-visible {
+      background: rgba(47, 89, 209, 0.22);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px -16px rgba(47, 89, 209, 0.55);
+      outline: none;
+    }
+
+    .details-button:disabled {
+      background: rgba(17, 24, 39, 0.08);
+      color: var(--text-muted);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .details-button[data-tooltip]:hover::before,
+    .details-button[data-tooltip]:focus-visible::before {
+      content: '';
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 14px;
+      width: 10px;
+      height: 10px;
+      background: #111827;
+      transform: rotate(45deg);
+      box-shadow: 0 12px 24px -16px rgba(17, 24, 39, 0.65);
+      pointer-events: none;
+      z-index: 9;
+    }
+
+    .details-button[data-tooltip]:hover::after,
+    .details-button[data-tooltip]:focus-visible::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: calc(100% + 10px);
+      right: -4px;
+      background: #111827;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      line-height: 1.35;
+      white-space: pre-line;
+      min-width: 200px;
+      box-shadow: 0 18px 32px -20px rgba(17, 24, 39, 0.65);
+      pointer-events: none;
+      z-index: 9;
+    }
+
+    @media (max-width: 1280px) {
+      .table-row {
+        grid-template-columns:
+          minmax(220px, 2fr)
+          minmax(180px, 1.5fr)
+          repeat(4, minmax(72px, 0.8fr))
+          minmax(140px, 1.05fr)
+          minmax(150px, 1.05fr)
+          minmax(64px, 0.65fr)
+          minmax(120px, 0.85fr);
+      }
+    }
+
+    @media (max-width: 960px) {
+      .table-wrapper {
+        padding: 0;
+        background: transparent;
+      }
+
+      .comparison-table {
+        gap: 16px;
+      }
+
+      .table-row.table-header {
+        display: none;
+      }
+
+      .table-body {
+        gap: 16px;
+      }
+
+      .table-body .table-row {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px 16px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+          'provider provider'
+          'device device'
+          'monthly upfront'
+          'total total'
+          'effective effective'
+          'bonus duration'
+          'details actions';
+        row-gap: 16px;
+        background: rgba(255, 255, 255, 0.55);
+      }
+
+      .table-row.selectable:hover {
+        background: rgba(47, 89, 209, 0.08);
+      }
+
+      .table-row.selected {
+        outline-offset: 0;
+      }
+
+      .cell {
+        padding: 0;
+        align-items: flex-start;
+      }
+
+      .cell::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+      }
+
+      .cell--provider::before,
+      .cell--device::before {
+        display: none;
+      }
+
+      .cell--total,
+      .cell--effective {
+        justify-content: flex-start;
+        text-align: left;
+        font-size: 1.2rem;
+      }
+
+      .cell--monthly,
+      .cell--upfront,
+      .cell--bonus,
+      .cell--duration {
+        justify-content: flex-start;
+        text-align: left;
+      }
+
+      .cell--details,
+      .cell--actions {
+        justify-content: flex-start;
+      }
+
+      .details-button[data-tooltip]:hover::before,
+      .details-button[data-tooltip]:focus-visible::before {
+        right: auto;
+        left: 16px;
+      }
+
+      .details-button[data-tooltip]:hover::after,
+      .details-button[data-tooltip]:focus-visible::after {
+        right: auto;
+        left: 0;
+      }
     }
 
     .empty {
@@ -753,50 +984,52 @@
         </select>
       </div>
       <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Anbieter & Tarif</th>
-              <th>Monatlich</th>
-              <th>Einmalig</th>
-              <th>Bonus</th>
-              <th>Laufzeit</th>
-              <th>Handy</th>
-              <th>Gesamtkosten</th>
-              <th>Effektiv / Monat</th>
-              <th>Details</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody id="contract-table"></tbody>
-        </table>
+        <div class="comparison-table" role="table" aria-label="Tarifvergleich">
+          <div class="table-row table-header" role="row">
+            <div class="cell cell--provider" role="columnheader">Anbieter &amp; Tarif</div>
+            <div class="cell cell--device" role="columnheader">Handy</div>
+            <div class="cell cell--monthly" role="columnheader">Monatlich</div>
+            <div class="cell cell--upfront" role="columnheader">Einmalig</div>
+            <div class="cell cell--bonus" role="columnheader">Bonus</div>
+            <div class="cell cell--duration" role="columnheader">Laufzeit</div>
+            <div class="cell cell--total" role="columnheader">Gesamtkosten</div>
+            <div class="cell cell--effective" role="columnheader">Effektiv / Monat</div>
+            <div class="cell cell--details" role="columnheader">Details</div>
+            <div class="cell cell--actions" role="columnheader">Aktionen</div>
+          </div>
+          <div id="contract-table" class="table-body" role="rowgroup"></div>
+        </div>
       </div>
     </div>
   </template>
 
   <template id="row-template">
-    <tr>
-      <td>
-        <div style="display:flex; flex-direction:column; gap:4px;">
+    <div class="table-row" role="row">
+      <div class="cell cell--provider" data-label="Anbieter &amp; Tarif" role="cell">
+        <div class="provider-stack">
           <strong class="name"></strong>
           <span class="tag data"></span>
         </div>
-      </td>
-      <td class="monthly"></td>
-      <td class="upfront"></td>
-      <td class="bonus"></td>
-      <td class="duration"></td>
-      <td class="device"></td>
-      <td class="total"></td>
-      <td class="effective"></td>
-      <td class="notes"></td>
-      <td class="actions">
-        <div style="display:flex; gap:8px; justify-content:flex-end;">
+      </div>
+      <div class="cell cell--device device" data-label="Handy" role="cell"></div>
+      <div class="cell cell--monthly monthly" data-label="Monatlich" role="cell"></div>
+      <div class="cell cell--upfront upfront" data-label="Einmalig" role="cell"></div>
+      <div class="cell cell--bonus bonus" data-label="Bonus" role="cell"></div>
+      <div class="cell cell--duration duration" data-label="Laufzeit" role="cell"></div>
+      <div class="cell cell--total total" data-label="Gesamtkosten" role="cell"></div>
+      <div class="cell cell--effective effective" data-label="Effektiv / Monat" role="cell"></div>
+      <div class="cell cell--details notes" data-label="Details" role="cell">
+        <button type="button" class="details-button" aria-label="Details anzeigen">
+          <span aria-hidden="true">ℹ️</span>
+        </button>
+      </div>
+      <div class="cell cell--actions" data-label="Aktionen" role="cell">
+        <div class="actions-group">
           <button type="button" class="button-ghost button-small edit-button">Bearbeiten</button>
           <button type="button" class="button-danger button-small delete-button">Löschen</button>
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
   </template>
 
   <script>
@@ -1396,61 +1629,61 @@
       }
     }
 
-    function createNoteItem(icon, contentNode) {
-      const item = document.createElement('li');
-      item.className = 'note-item';
+    function buildNotesCell(cell, contract, index) {
+      const detailsButton = cell.querySelector('.details-button');
 
-      const iconEl = document.createElement('span');
-      iconEl.className = 'note-icon';
-      iconEl.textContent = icon;
-      item.appendChild(iconEl);
-
-      if (typeof contentNode === 'string') {
-        item.appendChild(document.createTextNode(contentNode));
-      } else if (contentNode instanceof Node) {
-        item.appendChild(contentNode);
-      }
-
-      return item;
-    }
-
-    function buildNotesCell(cell, contract) {
-      cell.innerHTML = '';
-      const noteItems = [];
-
-      if (contract.link) {
-        const linkEl = document.createElement('a');
-        linkEl.href = contract.link;
-        linkEl.target = '_blank';
-        linkEl.rel = 'noopener';
-        linkEl.textContent = 'Direktlink öffnen';
-        linkEl.className = 'note-link';
-        noteItems.push(createNoteItem('🔗', linkEl));
-      }
-
-      if (contract.connectionFeeAmount) {
-        const badge = document.createElement('span');
-        badge.className = 'note-badge';
-        badge.textContent = 'Anschlussgebühr enthalten';
-        noteItems.push(createNoteItem('💶', badge));
-      }
-
-      if (contract.notes) {
-        const text = document.createElement('span');
-        text.className = 'note-text';
-        text.textContent = contract.notes;
-        noteItems.push(createNoteItem('📝', text));
-      }
-
-      if (!noteItems.length) {
-        cell.textContent = '—';
+      if (!detailsButton) {
         return;
       }
 
-      const list = document.createElement('ul');
-      list.className = 'note-list';
-      noteItems.forEach(item => list.appendChild(item));
-      cell.appendChild(list);
+      const details = [];
+
+      if (contract.link) {
+        details.push('Direktlink verfügbar');
+      }
+
+      if (contract.connectionFeeAmount) {
+        details.push('Anschlussgebühr enthalten');
+      }
+
+      if (contract.notes) {
+        details.push(contract.notes);
+      }
+
+      if (!details.length) {
+        detailsButton.disabled = true;
+        detailsButton.removeAttribute('data-tooltip');
+        detailsButton.removeAttribute('title');
+        detailsButton.setAttribute('aria-label', 'Keine zusätzlichen Details verfügbar');
+        return;
+      }
+
+      const tooltip = details.map(entry => `• ${entry}`).join('\n');
+      detailsButton.disabled = false;
+      detailsButton.dataset.tooltip = tooltip;
+      detailsButton.title = details.join('\n');
+      detailsButton.setAttribute('aria-label', 'Weitere Vertragsdetails anzeigen');
+
+      detailsButton.addEventListener('click', event => {
+        event.stopPropagation();
+
+        if (event.metaKey || event.ctrlKey) {
+          if (contract.link) {
+            window.open(contract.link, '_blank', 'noopener');
+          }
+          return;
+        }
+
+        if (selectedIndex !== index) {
+          selectedIndex = index;
+          render();
+          return;
+        }
+
+        if (contract.link) {
+          window.open(contract.link, '_blank', 'noopener');
+        }
+      });
     }
 
     const contracts = loadContracts();
@@ -1589,16 +1822,18 @@
 
       sortedEntries.forEach(({ contract, index }) => {
         const row = rowTemplate.content.cloneNode(true);
-        const tr = row.querySelector('tr');
+        const rowEl = row.querySelector('.table-row');
 
-        tr.classList.add('selectable');
+        if (rowEl) {
+          rowEl.classList.add('selectable');
 
-        if (index === editingIndex) {
-          tr.classList.add('editing');
-        }
+          if (index === editingIndex) {
+            rowEl.classList.add('editing');
+          }
 
-        if (index === selectedIndex) {
-          tr.classList.add('selected');
+          if (index === selectedIndex) {
+            rowEl.classList.add('selected');
+          }
         }
 
         const name = row.querySelector('.name');
@@ -1622,39 +1857,47 @@
         row.querySelector('.device').textContent = contract.device || '—';
 
         const notesCell = row.querySelector('.notes');
-        buildNotesCell(notesCell, contract);
+        buildNotesCell(notesCell, contract, index);
 
         const editButton = row.querySelector('.edit-button');
         if (editButton) {
-          editButton.addEventListener('click', () => startEdit(index));
+          editButton.addEventListener('click', event => {
+            event.stopPropagation();
+            startEdit(index);
+          });
         }
 
         const deleteButton = row.querySelector('.delete-button');
         if (deleteButton) {
-          deleteButton.addEventListener('click', () => deleteContract(index));
+          deleteButton.addEventListener('click', event => {
+            event.stopPropagation();
+            deleteContract(index);
+          });
         }
 
-        tr.addEventListener('click', event => {
-          if (event.target.closest('button') || event.target.closest('a')) {
-            return;
-          }
+        if (rowEl) {
+          rowEl.addEventListener('click', event => {
+            if (event.target.closest('button') || event.target.closest('a')) {
+              return;
+            }
 
-          if (selectedIndex !== index) {
-            selectedIndex = index;
-            render();
-          }
-        });
+            if (selectedIndex !== index) {
+              selectedIndex = index;
+              render();
+            }
+          });
+        }
 
         tbody.appendChild(row);
 
         monthlySum += contract.effective;
 
         if (contract.effective < lowestMonthly.value) {
-          lowestMonthly = { value: contract.effective, row: tr };
+          lowestMonthly = { value: contract.effective, row: rowEl };
         }
 
         if (contract.total < lowestTotal.value) {
-          lowestTotal = { value: contract.total, row: tr };
+          lowestTotal = { value: contract.total, row: rowEl };
         }
       });
 
