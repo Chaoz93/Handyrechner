@@ -433,6 +433,7 @@
 
     <section class="card">
       <div class="section-actions">
+        <button id="export-contracts" type="button" class="button-secondary">📤 Exportieren</button>
         <button id="open-import" type="button">📥 Importieren</button>
       </div>
       <h2>Vertrag anlegen</h2>
@@ -638,6 +639,7 @@
     const newDeviceInput = document.getElementById('new-device-input');
     const submitButton = document.getElementById('submit-button');
     const cancelEditButton = document.getElementById('cancel-edit');
+    const exportButton = document.getElementById('export-contracts');
 
     const importOpenButton = document.getElementById('open-import');
     const importOverlay = document.getElementById('import-overlay');
@@ -795,6 +797,77 @@
 
       form.elements['link'].value = data.link || '';
       form.elements['notes'].value = data.notizen || '';
+    }
+
+    function exportValue(value, { decimal = false } = {}) {
+      if (value === null || value === undefined) {
+        return '';
+      }
+
+      let stringValue = '';
+
+      if (typeof value === 'number') {
+        if (!Number.isFinite(value)) {
+          return '';
+        }
+        stringValue = value.toString();
+      } else {
+        stringValue = value.toString();
+      }
+
+      if (decimal) {
+        stringValue = stringValue.replace(/\./g, ',');
+      }
+
+      return stringValue.replace(/\t/g, ' ').replace(/\r?\n/g, ' / ').trim();
+    }
+
+    function buildExportContent() {
+      if (!contracts.length) {
+        return '';
+      }
+
+      const rows = contracts.map(contract => {
+        return [
+          exportValue(contract.provider),
+          exportValue(contract.plan),
+          exportValue(contract.monthly, { decimal: true }),
+          exportValue(contract.upfront, { decimal: true }),
+          exportValue(contract.duration),
+          exportValue(contract.bonus, { decimal: true }),
+          exportValue(contract.connectionFeeAmount, { decimal: true }),
+          exportValue(contract.data),
+          exportValue(contract.flat),
+          exportValue(contract.device),
+          exportValue(contract.link),
+          exportValue(contract.notes),
+        ].join('\t');
+      });
+
+      return rows.join('\n');
+    }
+
+    if (exportButton) {
+      exportButton.addEventListener('click', () => {
+        const content = buildExportContent();
+        if (!content) {
+          window.alert('Es gibt keine Verträge zum Exportieren.');
+          return;
+        }
+
+        const blob = new Blob([content], {
+          type: 'text/tab-separated-values;charset=utf-8;',
+        });
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `handyrechner-export-${timestamp}.tsv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
     }
 
     importOpenButton.addEventListener('click', () => {
