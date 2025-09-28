@@ -236,6 +236,79 @@
       font-weight: 600;
     }
 
+    .table-controls {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .table-controls label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    td.notes {
+      min-width: 220px;
+    }
+
+    .note-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .note-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: #1b1f2a;
+    }
+
+    .note-icon {
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .note-link {
+      color: var(--primary-dark);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .note-link:hover,
+    .note-link:focus {
+      text-decoration: underline;
+    }
+
+    .note-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(47, 89, 209, 0.15);
+      color: var(--primary-dark);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .note-text {
+      line-height: 1.4;
+    }
+
     .empty {
       padding: 32px;
       text-align: center;
@@ -496,6 +569,20 @@
           <span>Durchschnittliche monatliche Kosten</span>
           <span id="average-monthly"></span>
         </div>
+      </div>
+      <div class="table-controls">
+        <label for="sort-select">Sortieren nach</label>
+        <select id="sort-select">
+          <option value="effective-asc">Effektiv / Monat (aufsteigend)</option>
+          <option value="effective-desc">Effektiv / Monat (absteigend)</option>
+          <option value="total-asc">Gesamtkosten (aufsteigend)</option>
+          <option value="total-desc">Gesamtkosten (absteigend)</option>
+          <option value="monthly-asc">Monatspreis (aufsteigend)</option>
+          <option value="monthly-desc">Monatspreis (absteigend)</option>
+          <option value="provider-asc">Anbieter (A–Z)</option>
+          <option value="provider-desc">Anbieter (Z–A)</option>
+          <option value="created">Eingabereihenfolge</option>
+        </select>
       </div>
       <div class="table-wrapper">
         <table>
@@ -766,6 +853,19 @@
     });
 
     const STORAGE_KEY = 'handyvertrag-contracts';
+    const SORT_STORAGE_KEY = 'handyrechner-sort';
+    const SORT_DEFAULT = 'effective-asc';
+    const VALID_SORTS = new Set([
+      'effective-asc',
+      'effective-desc',
+      'total-asc',
+      'total-desc',
+      'monthly-asc',
+      'monthly-desc',
+      'provider-asc',
+      'provider-desc',
+      'created',
+    ]);
 
     function loadContracts() {
       try {
@@ -780,6 +880,24 @@
 
     function saveContracts() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(contracts));
+    }
+
+    function loadSortPreference() {
+      try {
+        const stored = localStorage.getItem(SORT_STORAGE_KEY);
+        return stored && VALID_SORTS.has(stored) ? stored : SORT_DEFAULT;
+      } catch (error) {
+        console.warn('Sortierung konnte nicht geladen werden.', error);
+        return SORT_DEFAULT;
+      }
+    }
+
+    function saveSortPreference(sort) {
+      try {
+        localStorage.setItem(SORT_STORAGE_KEY, sort);
+      } catch (error) {
+        console.warn('Sortierung konnte nicht gespeichert werden.', error);
+      }
     }
 
     function updateContractCalculations(contract) {
@@ -800,8 +918,122 @@
       contract.effective = duration ? total / duration : 0;
     }
 
+    function sortContractEntries(entries, sortKey) {
+      if (!VALID_SORTS.has(sortKey) || sortKey === 'created') {
+        return entries;
+      }
+
+      const sorted = [...entries];
+      const comparator = getSortComparator(sortKey);
+      if (comparator) {
+        sorted.sort(comparator);
+      }
+      return sorted;
+    }
+
+    function getSortComparator(sortKey) {
+      switch (sortKey) {
+        case 'effective-asc':
+          return (a, b) => a.contract.effective - b.contract.effective || a.index - b.index;
+        case 'effective-desc':
+          return (a, b) => b.contract.effective - a.contract.effective || a.index - b.index;
+        case 'total-asc':
+          return (a, b) => a.contract.total - b.contract.total || a.index - b.index;
+        case 'total-desc':
+          return (a, b) => b.contract.total - a.contract.total || a.index - b.index;
+        case 'monthly-asc':
+          return (a, b) => a.contract.monthly - b.contract.monthly || a.index - b.index;
+        case 'monthly-desc':
+          return (a, b) => b.contract.monthly - a.contract.monthly || a.index - b.index;
+        case 'provider-asc':
+          return (a, b) => {
+            const providerA = (a.contract.provider || '').toString();
+            const providerB = (b.contract.provider || '').toString();
+            const planA = (a.contract.plan || '').toString();
+            const planB = (b.contract.plan || '').toString();
+            return (
+              providerA.localeCompare(providerB, 'de', { sensitivity: 'base' }) ||
+              planA.localeCompare(planB, 'de', { sensitivity: 'base' }) ||
+              a.index - b.index
+            );
+          };
+        case 'provider-desc':
+          return (a, b) => {
+            const providerA = (a.contract.provider || '').toString();
+            const providerB = (b.contract.provider || '').toString();
+            const planA = (a.contract.plan || '').toString();
+            const planB = (b.contract.plan || '').toString();
+            return (
+              providerB.localeCompare(providerA, 'de', { sensitivity: 'base' }) ||
+              planB.localeCompare(planA, 'de', { sensitivity: 'base' }) ||
+              a.index - b.index
+            );
+          };
+        default:
+          return null;
+      }
+    }
+
+    function createNoteItem(icon, contentNode) {
+      const item = document.createElement('li');
+      item.className = 'note-item';
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'note-icon';
+      iconEl.textContent = icon;
+      item.appendChild(iconEl);
+
+      if (typeof contentNode === 'string') {
+        item.appendChild(document.createTextNode(contentNode));
+      } else if (contentNode instanceof Node) {
+        item.appendChild(contentNode);
+      }
+
+      return item;
+    }
+
+    function buildNotesCell(cell, contract) {
+      cell.innerHTML = '';
+      const noteItems = [];
+
+      if (contract.link) {
+        const linkEl = document.createElement('a');
+        linkEl.href = contract.link;
+        linkEl.target = '_blank';
+        linkEl.rel = 'noopener';
+        linkEl.textContent = 'Direktlink öffnen';
+        linkEl.className = 'note-link';
+        noteItems.push(createNoteItem('🔗', linkEl));
+      }
+
+      if (contract.connectionFeeAmount) {
+        const badge = document.createElement('span');
+        badge.className = 'note-badge';
+        badge.textContent = 'Anschlussgebühr enthalten';
+        noteItems.push(createNoteItem('💶', badge));
+      }
+
+      if (contract.notes) {
+        const text = document.createElement('span');
+        text.className = 'note-text';
+        text.textContent = contract.notes;
+        noteItems.push(createNoteItem('📝', text));
+      }
+
+      if (!noteItems.length) {
+        cell.textContent = '—';
+        return;
+      }
+
+      const list = document.createElement('ul');
+      list.className = 'note-list';
+      noteItems.forEach(item => list.appendChild(item));
+      cell.appendChild(list);
+    }
+
     const contracts = loadContracts();
     contracts.forEach(updateContractCalculations);
+    let currentSort = loadSortPreference();
 
     const deviceStorageKey = 'handyrechner-devices';
     let devices = [];
@@ -884,15 +1116,36 @@
         return;
       }
 
+      if (!VALID_SORTS.has(currentSort)) {
+        currentSort = SORT_DEFAULT;
+      }
+
+      const contractEntries = contracts.map((contract, index) => {
+        updateContractCalculations(contract);
+        return { contract, index };
+      });
+
+      const sortedEntries = sortContractEntries(contractEntries, currentSort);
+
       const fragment = tableTemplate.content.cloneNode(true);
       const tbody = fragment.getElementById('contract-table');
+      const sortSelect = fragment.getElementById('sort-select');
+
+      if (sortSelect) {
+        sortSelect.value = currentSort;
+        sortSelect.addEventListener('change', event => {
+          const nextSort = event.target.value;
+          currentSort = VALID_SORTS.has(nextSort) ? nextSort : SORT_DEFAULT;
+          saveSortPreference(currentSort);
+          render();
+        });
+      }
 
       let lowestMonthly = { value: Infinity, row: null };
       let lowestTotal = { value: Infinity, row: null };
       let monthlySum = 0;
 
-      contracts.forEach((contract, index) => {
-        updateContractCalculations(contract);
+      sortedEntries.forEach(({ contract, index }) => {
         const row = rowTemplate.content.cloneNode(true);
         const tr = row.querySelector('tr');
 
@@ -921,39 +1174,7 @@
         row.querySelector('.device').textContent = contract.device || '—';
 
         const notesCell = row.querySelector('.notes');
-        notesCell.innerHTML = '';
-        let hasDetails = false;
-
-        if (contract.link) {
-          const linkEl = document.createElement('a');
-          linkEl.href = contract.link;
-          linkEl.target = '_blank';
-          linkEl.rel = 'noopener';
-          linkEl.textContent = 'Direktlink';
-          notesCell.appendChild(linkEl);
-          hasDetails = true;
-        }
-
-        if (contract.connectionFeeAmount) {
-          const feeNote = document.createElement('span');
-          feeNote.textContent = 'inkl. Anschlussgebühr';
-          notesCell.appendChild(feeNote);
-          hasDetails = true;
-        }
-
-        if (contract.notes) {
-          if (hasDetails) {
-            notesCell.appendChild(document.createElement('br'));
-          }
-          const notesText = document.createElement('span');
-          notesText.textContent = contract.notes;
-          notesCell.appendChild(notesText);
-          hasDetails = true;
-        }
-
-        if (!hasDetails) {
-          notesCell.textContent = '—';
-        }
+        buildNotesCell(notesCell, contract);
 
         const editButton = row.querySelector('.edit-button');
         if (editButton) {
