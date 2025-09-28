@@ -296,7 +296,24 @@
     const tableTemplate = document.getElementById('table-template');
     const rowTemplate = document.getElementById('row-template');
 
-    const contracts = [];
+    const STORAGE_KEY = 'handyvertrag-contracts';
+
+    function loadContracts() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const parsed = stored ? JSON.parse(stored) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.warn('Konnte gespeicherte Verträge nicht laden:', error);
+        return [];
+      }
+    }
+
+    function saveContracts() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(contracts));
+    }
+
+    const contracts = loadContracts();
 
     const euro = new Intl.NumberFormat('de-DE', {
       style: 'currency',
@@ -392,9 +409,13 @@
         effective,
       });
 
+      saveContracts();
+
       form.reset();
       render();
     });
+
+    render();
   </script>
 </body>
 </html>
