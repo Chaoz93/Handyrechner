@@ -71,6 +71,10 @@
       .grid.three {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
+
+      .grid.four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
     }
 
     label {
@@ -197,7 +201,7 @@
             <input type="text" name="plan" placeholder="z.B. Magenta Mobil" required />
           </label>
         </div>
-        <div class="grid three">
+        <div class="grid four">
           <label>
             Monatliche Kosten (€)
             <input type="number" name="monthly" step="0.01" min="0" required />
@@ -209,6 +213,10 @@
           <label>
             Laufzeit (Monate)
             <input type="number" name="duration" min="1" value="24" required />
+          </label>
+          <label>
+            Bonuszahlungen (€)
+            <input type="number" name="bonus" step="0.01" min="0" value="0" />
           </label>
         </div>
         <div class="grid two">
@@ -281,6 +289,7 @@
               <th>Anbieter & Tarif</th>
               <th>Monatlich</th>
               <th>Einmalig</th>
+              <th>Bonus</th>
               <th>Laufzeit</th>
               <th>Handy</th>
               <th>Gesamtkosten</th>
@@ -304,6 +313,7 @@
       </td>
       <td class="monthly"></td>
       <td class="upfront"></td>
+      <td class="bonus"></td>
       <td class="duration"></td>
       <td class="device"></td>
       <td class="total"></td>
@@ -338,7 +348,24 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(contracts));
     }
 
+    function updateContractCalculations(contract) {
+      const monthly = Number(contract.monthly) || 0;
+      const upfront = Number(contract.upfront) || 0;
+      const duration = Number(contract.duration) || 0;
+      const bonus = Number(contract.bonus) || 0;
+
+      const total = monthly * duration + upfront - bonus;
+
+      contract.monthly = monthly;
+      contract.upfront = upfront;
+      contract.duration = duration;
+      contract.bonus = bonus;
+      contract.total = total;
+      contract.effective = duration ? total / duration : 0;
+    }
+
     const contracts = loadContracts();
+    contracts.forEach(updateContractCalculations);
 
     const deviceStorageKey = 'handyrechner-devices';
     let devices = [];
@@ -430,6 +457,7 @@
       let monthlySum = 0;
 
       contracts.forEach(contract => {
+        updateContractCalculations(contract);
         const row = rowTemplate.content.cloneNode(true);
         const tr = row.querySelector('tr');
 
@@ -442,6 +470,7 @@
 
         row.querySelector('.monthly').textContent = euro.format(contract.monthly);
         row.querySelector('.upfront').textContent = euro.format(contract.upfront);
+        row.querySelector('.bonus').textContent = euro.format(contract.bonus);
         row.querySelector('.duration').textContent = `${contract.duration} Monate`;
         row.querySelector('.total').textContent = euro.format(contract.total);
         row.querySelector('.effective').textContent = euro.format(contract.effective);
@@ -514,6 +543,7 @@
       const monthly = Number(formData.get('monthly')) || 0;
       const upfront = Number(formData.get('upfront')) || 0;
       const duration = Number(formData.get('duration')) || 0;
+      const bonus = Number(formData.get('bonus')) || 0;
       let device = formData.get('device') || '';
       const link = (formData.get('link') || '').trim();
 
@@ -532,23 +562,22 @@
         }
       }
 
-      const total = monthly * duration + upfront;
-      const effective = total / duration;
-
-      contracts.push({
+      const newContract = {
         provider: formData.get('provider').trim(),
         plan: formData.get('plan').trim(),
         monthly,
         upfront,
         duration,
+        bonus,
         data: formData.get('data'),
         flat: formData.get('flat'),
         device,
         link,
         notes: (formData.get('notes') || '').trim(),
-        total,
-        effective,
-      });
+      };
+
+      updateContractCalculations(newContract);
+      contracts.push(newContract);
 
       saveContracts();
 
