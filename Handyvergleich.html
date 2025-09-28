@@ -1715,6 +1715,40 @@
       }
     }
 
+    function collectDevicesFromContracts() {
+      return contracts
+        .map(contract => (contract.device || '').toString().trim())
+        .filter(Boolean);
+    }
+
+    function syncDevicesFromContracts({ persist = false } = {}) {
+      const uniqueDevices = Array.from(new Set(collectDevicesFromContracts()))
+        .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+
+      const hasChanged =
+        uniqueDevices.length !== devices.length ||
+        uniqueDevices.some((device, index) => device !== devices[index]);
+
+      if (hasChanged) {
+        devices = uniqueDevices;
+        if (persist) {
+          saveDevices();
+        }
+      }
+
+      return hasChanged;
+    }
+
+    function refreshDeviceOptions(preferredValue = '', { sync = true } = {}) {
+      const previousSelection = preferredValue || deviceSelect.value || '';
+
+      if (sync) {
+        syncDevicesFromContracts({ persist: true });
+      }
+
+      populateDeviceOptions(previousSelection);
+    }
+
     function populateDeviceOptions(selected = '') {
       deviceSelect.innerHTML = '';
 
@@ -1765,6 +1799,7 @@
     let selectedIndex = null;
 
     function render() {
+      refreshDeviceOptions(deviceSelect.value);
       overview.innerHTML = '';
 
       if (!contracts.length) {
@@ -2030,7 +2065,7 @@
       editingIndex = null;
       submitButton.textContent = 'Vertrag hinzufügen';
       cancelEditButton.classList.add('hidden');
-      populateDeviceOptions(selectedDevice);
+      refreshDeviceOptions(selectedDevice);
       showNewDeviceInput(false);
       newDeviceInput.value = '';
     }
@@ -2067,7 +2102,7 @@
         saveDevices();
       }
 
-      populateDeviceOptions(contract.device || '');
+      refreshDeviceOptions(contract.device || '');
       fillFormWithContract(contract);
       submitButton.textContent = 'Vertrag aktualisieren';
       cancelEditButton.classList.remove('hidden');
@@ -2138,7 +2173,7 @@
             saveDevices();
           }
           device = newDevice;
-          populateDeviceOptions(device);
+          refreshDeviceOptions(device, { sync: false });
         } else {
           device = '';
         }
