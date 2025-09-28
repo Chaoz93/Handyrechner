@@ -179,6 +179,61 @@
       font-size: 0.85rem;
     }
 
+    .icon-button {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid rgba(47, 89, 209, 0.2);
+      background: rgba(47, 89, 209, 0.12);
+      color: var(--primary-dark);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .icon-button:hover,
+    .icon-button:focus-visible {
+      background: rgba(47, 89, 209, 0.22);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px -16px rgba(47, 89, 209, 0.55);
+      outline: none;
+    }
+
+    .icon-button--edit {
+      background: rgba(47, 89, 209, 0.12);
+      color: var(--primary-dark);
+    }
+
+    .icon-button--delete {
+      background: rgba(198, 40, 40, 0.12);
+      border-color: rgba(198, 40, 40, 0.35);
+      color: #8c1d1d;
+    }
+
+    .icon-button--delete:hover,
+    .icon-button--delete:focus-visible {
+      background: rgba(198, 40, 40, 0.2);
+      box-shadow: 0 12px 24px -18px rgba(198, 40, 40, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     .form-actions {
       display: flex;
       justify-content: flex-end;
@@ -1025,8 +1080,14 @@
       </div>
       <div class="cell cell--actions" data-label="Aktionen" role="cell">
         <div class="actions-group">
-          <button type="button" class="button-ghost button-small edit-button">Bearbeiten</button>
-          <button type="button" class="button-danger button-small delete-button">Löschen</button>
+          <button type="button" class="icon-button icon-button--edit edit-button" aria-label="Bearbeiten">
+            <span aria-hidden="true">✏️</span>
+            <span class="visually-hidden">Bearbeiten</span>
+          </button>
+          <button type="button" class="icon-button icon-button--delete delete-button" aria-label="Löschen">
+            <span aria-hidden="true">🗑️</span>
+            <span class="visually-hidden">Löschen</span>
+          </button>
         </div>
       </div>
     </div>
