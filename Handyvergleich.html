@@ -428,6 +428,12 @@
       border-bottom: none;
     }
 
+    .import-preview .entry-header td {
+      background: rgba(47, 89, 209, 0.12);
+      font-weight: 600;
+      color: var(--primary);
+    }
+
     .error-message {
       color: #c62828;
       background: rgba(198, 40, 40, 0.12);
@@ -691,6 +697,7 @@
       importPreviewWrapper.classList.add('hidden');
       importPreviewBody.innerHTML = '';
       importConfirm.disabled = true;
+      importConfirm.textContent = 'Import übernehmen';
       parsedImport = null;
     }
 
@@ -708,63 +715,87 @@
     }
 
     function parseImportString(raw) {
-      const trimmed = (raw || '').trim();
-      if (!trimmed) {
+      const input = typeof raw === 'string' ? raw : '';
+
+      if (!input.trim()) {
         throw new Error('Bitte gib einen Importstring ein.');
       }
 
-      const line = trimmed.split(/\r?\n/).find(entry => entry.trim().length > 0);
-      if (!line) {
+      const lines = input
+        .split(/\r?\n/)
+        .map(entry => entry.replace(/\r/g, ''))
+        .filter(entry => entry.trim().length > 0);
+
+      if (!lines.length) {
         throw new Error('Der Importstring ist leer.');
       }
 
-      const values = line.split('\t');
-      if (values.length !== importFields.length) {
-        throw new Error(`Der Importstring muss genau ${importFields.length} Werte enthalten.`);
-      }
+      return lines.map((line, index) => {
+        const values = line.split('\t');
+        if (values.length !== importFields.length) {
+          throw new Error(`Zeile ${index + 1} muss genau ${importFields.length} Werte enthalten.`);
+        }
 
-      const [
-        anbieter,
-        tarif,
-        monatlich,
-        einmalig,
-        laufzeit,
-        bonus,
-        anschluss,
-        datenvolumen,
-        flat,
-        handy,
-        link,
-        notizen,
-      ] = values.map(value => value.trim());
+        const [
+          anbieter,
+          tarif,
+          monatlich,
+          einmalig,
+          laufzeit,
+          bonus,
+          anschluss,
+          datenvolumen,
+          flat,
+          handy,
+          link,
+          notizen,
+        ] = values.map(value => value.trim());
 
-      return {
-        anbieter,
-        tarif,
-        monatlich,
-        einmalig,
-        laufzeit,
-        bonus,
-        anschluss,
-        datenvolumen,
-        flat,
-        handy,
-        link,
-        notizen,
-      };
+        return {
+          anbieter,
+          tarif,
+          monatlich,
+          einmalig,
+          laufzeit,
+          bonus,
+          anschluss,
+          datenvolumen,
+          flat,
+          handy,
+          link,
+          notizen,
+        };
+      });
     }
 
-    function renderImportPreview(data) {
+    function renderImportPreview(entries) {
       importPreviewBody.innerHTML = '';
-      importFields.forEach(field => {
-        const row = document.createElement('tr');
-        const labelCell = document.createElement('td');
-        labelCell.textContent = field.label;
-        const valueCell = document.createElement('td');
-        valueCell.textContent = data[field.key] || '—';
-        row.append(labelCell, valueCell);
-        importPreviewBody.appendChild(row);
+      entries.forEach((entry, entryIndex) => {
+        if (entries.length > 1) {
+          const headerRow = document.createElement('tr');
+          headerRow.className = 'entry-header';
+          const headerCell = document.createElement('td');
+          headerCell.colSpan = 2;
+          headerCell.textContent = `Vertrag ${entryIndex + 1}`;
+          headerRow.appendChild(headerCell);
+          importPreviewBody.appendChild(headerRow);
+        }
+
+        importFields.forEach(field => {
+          const row = document.createElement('tr');
+          const labelCell = document.createElement('td');
+          labelCell.textContent = field.label;
+          const valueCell = document.createElement('td');
+          valueCell.textContent = entry[field.key] || '—';
+          row.append(labelCell, valueCell);
+          importPreviewBody.appendChild(row);
+        });
       });
+
+      if (importConfirm) {
+        importConfirm.textContent = entries.length > 1 ? 'Verträge ersetzen' : 'Vertrag importieren';
+      }
+
       importPreviewWrapper.classList.remove('hidden');
     }
 
@@ -776,43 +807,104 @@
       return str.replace(',', '.');
     }
 
-    function applyImportToForm(data) {
-      resetFormState();
-      render();
-
-      form.elements['provider'].value = data.anbieter || '';
-      form.elements['plan'].value = data.tarif || '';
-      form.elements['monthly'].value = toNumberString(data.monatlich);
-      form.elements['upfront'].value = toNumberString(data.einmalig);
-      form.elements['duration'].value = toNumberString(data.laufzeit);
-      form.elements['bonus'].value = toNumberString(data.bonus);
-
-      const connectionValue = Number(toNumberString(data.anschluss)) || 0;
-      form.elements['connectionFee'].checked = connectionValue > 0;
-
-      form.elements['data'].value = toNumberString(data.datenvolumen);
-
-      const flatValue = (data.flat || '').toString().trim().toLowerCase();
-      form.elements['flat'].value = flatValue === 'ja' ? 'ja' : 'nein';
-
-      const deviceValue = (data.handy || '').trim();
-      if (deviceValue) {
-        if (!devices.includes(deviceValue)) {
-          devices.push(deviceValue);
-          devices.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-          saveDevices();
-        }
-        populateDeviceOptions(deviceValue);
-        deviceSelect.value = deviceValue;
-      } else {
-        populateDeviceOptions('');
+    function addDeviceIfMissing(deviceName) {
+      const trimmed = (deviceName || '').trim();
+      if (!trimmed) {
+        return { name: '', added: false };
       }
 
-      showNewDeviceInput(false);
-      newDeviceInput.value = '';
+      if (!devices.includes(trimmed)) {
+        devices.push(trimmed);
+        devices.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+        return { name: trimmed, added: true };
+      }
 
-      form.elements['link'].value = data.link || '';
-      form.elements['notes'].value = data.notizen || '';
+      return { name: trimmed, added: false };
+    }
+
+    function createContractFromImport(entry) {
+      const provider = (entry.anbieter || '').trim();
+      const plan = (entry.tarif || '').trim();
+      const monthly = Number(toNumberString(entry.monatlich)) || 0;
+      const upfront = Number(toNumberString(entry.einmalig)) || 0;
+      const duration = Number(toNumberString(entry.laufzeit)) || 0;
+      const bonus = Number(toNumberString(entry.bonus)) || 0;
+      const connectionFeeAmount = Number(toNumberString(entry.anschluss)) || 0;
+      const dataVolume = toNumberString(entry.datenvolumen);
+      const flatValue = (entry.flat || '').toString().trim().toLowerCase();
+      const device = (entry.handy || '').trim();
+      const link = (entry.link || '').trim();
+      const notes = (entry.notizen || '').trim();
+
+      const contract = {
+        provider,
+        plan,
+        monthly,
+        upfront,
+        duration,
+        bonus,
+        connectionFeeAmount,
+        data: dataVolume,
+        flat: flatValue === 'ja' ? 'ja' : 'nein',
+        device,
+        link,
+        notes,
+      };
+
+      updateContractCalculations(contract);
+
+      return contract;
+    }
+
+    function applyImportEntries(entries) {
+      if (!entries.length) {
+        return { mode: 'none', count: 0 };
+      }
+
+      const previousSelection = deviceSelect.value;
+      let devicesUpdated = false;
+
+      const importedContracts = entries.map(entry => {
+        const contract = createContractFromImport(entry);
+        const { name: deviceName, added } = addDeviceIfMissing(contract.device);
+        if (added) {
+          devicesUpdated = true;
+        }
+        contract.device = deviceName;
+        return contract;
+      }).filter(contract => contract.provider || contract.plan || contract.monthly || contract.upfront || contract.duration || contract.bonus || contract.device || contract.link || contract.notes);
+
+      if (!importedContracts.length) {
+        return { mode: 'none', count: 0 };
+      }
+
+      if (importedContracts.length === 1) {
+        const singleContract = importedContracts[0];
+        if (devicesUpdated) {
+          saveDevices();
+        }
+
+        resetFormState(previousSelection);
+
+        contracts.push(singleContract);
+        saveContracts();
+        render();
+
+        return { mode: 'append', count: 1 };
+      }
+
+      if (devicesUpdated) {
+        saveDevices();
+      }
+
+      resetFormState('');
+
+      contracts.length = 0;
+      contracts.push(...importedContracts);
+      saveContracts();
+      render();
+
+      return { mode: 'replace', count: importedContracts.length };
     }
 
     function exportValue(value, { decimal = false } = {}) {
@@ -921,15 +1013,23 @@
         importError.textContent = error.message;
         importError.classList.remove('hidden');
         importConfirm.disabled = true;
+        importConfirm.textContent = 'Import übernehmen';
       }
     });
 
     importConfirm.addEventListener('click', () => {
-      if (!parsedImport) {
+      if (!Array.isArray(parsedImport) || !parsedImport.length) {
         return;
       }
-      applyImportToForm(parsedImport);
+      const result = applyImportEntries(parsedImport);
+      parsedImport = null;
       closeImportModal();
+
+      if (result.mode === 'append' && result.count === 1) {
+        window.alert('1 Vertrag wurde importiert.');
+      } else if (result.mode === 'replace' && result.count) {
+        window.alert(`${result.count} Verträge wurden importiert und vorhandene ersetzt.`);
+      }
     });
 
     importTextarea.addEventListener('input', () => {
@@ -939,6 +1039,7 @@
       importPreviewBody.innerHTML = '';
       importError.classList.add('hidden');
       importError.textContent = '';
+      importConfirm.textContent = 'Import übernehmen';
     });
 
     const STORAGE_KEY = 'handyvertrag-contracts';
