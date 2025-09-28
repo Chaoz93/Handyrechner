@@ -128,6 +128,13 @@
       background: var(--primary-dark);
     }
 
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -191,6 +198,124 @@
     .hidden {
       display: none !important;
     }
+
+    .section-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(16, 23, 48, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: 18px;
+      width: min(520px, 100%);
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 24px 60px -28px rgba(17, 24, 39, 0.6);
+      color: #1b1f2a;
+    }
+
+    .modal header {
+      padding: 20px 24px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .modal .modal-body {
+      padding: 20px 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .modal .modal-footer {
+      padding: 16px 24px 20px;
+      background: rgba(244, 246, 251, 0.8);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .modal textarea {
+      min-height: 120px;
+      resize: vertical;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
+    .modal textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(47, 89, 209, 0.2);
+    }
+
+    .import-preview {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .import-preview table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .import-preview th,
+    .import-preview td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    .import-preview th {
+      background: rgba(47, 89, 209, 0.08);
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .import-preview tr:last-child td {
+      border-bottom: none;
+    }
+
+    .button-secondary {
+      background: #e1e4eb;
+      color: #1b1f2a;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .button-secondary:hover {
+      background: #c9ceda;
+      color: #1b1f2a;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .error-message {
+      color: #c62828;
+      background: rgba(198, 40, 40, 0.12);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -201,6 +326,9 @@
     </header>
 
     <section class="card">
+      <div class="section-actions">
+        <button id="open-import" type="button">📥 Importieren</button>
+      </div>
       <h2>Vertrag anlegen</h2>
       <form id="contract-form">
         <div class="grid two">
@@ -284,6 +412,39 @@
     </section>
   </main>
 
+  <div id="import-overlay" class="modal-overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
+      <header>
+        <h3 id="import-title">Vertrag importieren</h3>
+      </header>
+      <div class="modal-body">
+        <div>
+          <label for="import-textarea" style="display:block; font-weight:600; margin-bottom:8px;">Importstring</label>
+          <textarea id="import-textarea" placeholder="Anbieter\tTarifname\tMonatlich ..."></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end;">
+          <button type="button" id="import-preview">Preview anzeigen</button>
+        </div>
+        <p id="import-error" class="error-message hidden"></p>
+        <div class="import-preview hidden" id="import-preview-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Feldname</th>
+                <th>Wert</th>
+              </tr>
+            </thead>
+            <tbody id="import-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="button-secondary" id="import-cancel">Abbrechen</button>
+        <button type="button" id="import-confirm" disabled>Import übernehmen</button>
+      </div>
+    </div>
+  </div>
+
   <template id="table-template">
     <div class="grid">
       <div class="summary">
@@ -348,6 +509,216 @@
     const deviceSelect = document.getElementById('device-select');
     const newDeviceWrapper = document.getElementById('new-device-wrapper');
     const newDeviceInput = document.getElementById('new-device-input');
+
+    const importOpenButton = document.getElementById('open-import');
+    const importOverlay = document.getElementById('import-overlay');
+    const importTextarea = document.getElementById('import-textarea');
+    const importPreviewButton = document.getElementById('import-preview');
+    const importPreviewWrapper = document.getElementById('import-preview-wrapper');
+    const importPreviewBody = document.getElementById('import-preview-body');
+    const importError = document.getElementById('import-error');
+    const importCancel = document.getElementById('import-cancel');
+    const importConfirm = document.getElementById('import-confirm');
+
+    const importFields = [
+      { key: 'anbieter', label: 'Anbieter' },
+      { key: 'tarif', label: 'Tarifname' },
+      { key: 'monatlich', label: 'Monatlich (€)' },
+      { key: 'einmalig', label: 'Einmalig (€)' },
+      { key: 'laufzeit', label: 'Laufzeit (Monate)' },
+      { key: 'bonus', label: 'Bonus (€)' },
+      { key: 'anschluss', label: 'Anschlussgebühr (€)' },
+      { key: 'datenvolumen', label: 'Datenvolumen (GB)' },
+      { key: 'flat', label: 'Minuten/SMS Flat' },
+      { key: 'handy', label: 'Handy' },
+      { key: 'link', label: 'Direktlink' },
+      { key: 'notizen', label: 'Notizen' },
+    ];
+
+    let parsedImport = null;
+
+    function resetImportModal() {
+      importTextarea.value = '';
+      importError.textContent = '';
+      importError.classList.add('hidden');
+      importPreviewWrapper.classList.add('hidden');
+      importPreviewBody.innerHTML = '';
+      importConfirm.disabled = true;
+      parsedImport = null;
+    }
+
+    function openImportModal() {
+      resetImportModal();
+      importOverlay.classList.remove('hidden');
+      setTimeout(() => {
+        importTextarea.focus();
+      }, 0);
+    }
+
+    function closeImportModal() {
+      importOverlay.classList.add('hidden');
+      resetImportModal();
+    }
+
+    function parseImportString(raw) {
+      const trimmed = (raw || '').trim();
+      if (!trimmed) {
+        throw new Error('Bitte gib einen Importstring ein.');
+      }
+
+      const line = trimmed.split(/\r?\n/).find(entry => entry.trim().length > 0);
+      if (!line) {
+        throw new Error('Der Importstring ist leer.');
+      }
+
+      const values = line.split('\t');
+      if (values.length !== importFields.length) {
+        throw new Error(`Der Importstring muss genau ${importFields.length} Werte enthalten.`);
+      }
+
+      const [
+        anbieter,
+        tarif,
+        monatlich,
+        einmalig,
+        laufzeit,
+        bonus,
+        anschluss,
+        datenvolumen,
+        flat,
+        handy,
+        link,
+        notizen,
+      ] = values.map(value => value.trim());
+
+      return {
+        anbieter,
+        tarif,
+        monatlich,
+        einmalig,
+        laufzeit,
+        bonus,
+        anschluss,
+        datenvolumen,
+        flat,
+        handy,
+        link,
+        notizen,
+      };
+    }
+
+    function renderImportPreview(data) {
+      importPreviewBody.innerHTML = '';
+      importFields.forEach(field => {
+        const row = document.createElement('tr');
+        const labelCell = document.createElement('td');
+        labelCell.textContent = field.label;
+        const valueCell = document.createElement('td');
+        valueCell.textContent = data[field.key] || '—';
+        row.append(labelCell, valueCell);
+        importPreviewBody.appendChild(row);
+      });
+      importPreviewWrapper.classList.remove('hidden');
+    }
+
+    function toNumberString(value) {
+      const str = (value || '').toString().trim();
+      if (!str) {
+        return '';
+      }
+      return str.replace(',', '.');
+    }
+
+    function applyImportToForm(data) {
+      form.elements['provider'].value = data.anbieter || '';
+      form.elements['plan'].value = data.tarif || '';
+      form.elements['monthly'].value = toNumberString(data.monatlich);
+      form.elements['upfront'].value = toNumberString(data.einmalig);
+      form.elements['duration'].value = toNumberString(data.laufzeit);
+      form.elements['bonus'].value = toNumberString(data.bonus);
+
+      const connectionValue = Number(toNumberString(data.anschluss)) || 0;
+      form.elements['connectionFee'].checked = connectionValue > 0;
+
+      form.elements['data'].value = toNumberString(data.datenvolumen);
+
+      const flatValue = (data.flat || '').toString().trim().toLowerCase();
+      form.elements['flat'].value = flatValue === 'ja' ? 'ja' : 'nein';
+
+      const deviceValue = (data.handy || '').trim();
+      if (deviceValue) {
+        if (!devices.includes(deviceValue)) {
+          devices.push(deviceValue);
+          devices.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+          saveDevices();
+        }
+        populateDeviceOptions(deviceValue);
+        deviceSelect.value = deviceValue;
+      } else {
+        populateDeviceOptions('');
+      }
+
+      showNewDeviceInput(false);
+      newDeviceInput.value = '';
+
+      form.elements['link'].value = data.link || '';
+      form.elements['notes'].value = data.notizen || '';
+    }
+
+    importOpenButton.addEventListener('click', () => {
+      openImportModal();
+    });
+
+    importCancel.addEventListener('click', () => {
+      closeImportModal();
+    });
+
+    importOverlay.addEventListener('click', event => {
+      if (event.target === importOverlay) {
+        closeImportModal();
+      }
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !importOverlay.classList.contains('hidden')) {
+        closeImportModal();
+      }
+    });
+
+    importPreviewButton.addEventListener('click', () => {
+      try {
+        const parsed = parseImportString(importTextarea.value);
+        parsedImport = parsed;
+        renderImportPreview(parsed);
+        importError.classList.add('hidden');
+        importError.textContent = '';
+        importConfirm.disabled = false;
+      } catch (error) {
+        parsedImport = null;
+        importPreviewWrapper.classList.add('hidden');
+        importPreviewBody.innerHTML = '';
+        importError.textContent = error.message;
+        importError.classList.remove('hidden');
+        importConfirm.disabled = true;
+      }
+    });
+
+    importConfirm.addEventListener('click', () => {
+      if (!parsedImport) {
+        return;
+      }
+      applyImportToForm(parsedImport);
+      closeImportModal();
+    });
+
+    importTextarea.addEventListener('input', () => {
+      parsedImport = null;
+      importConfirm.disabled = true;
+      importPreviewWrapper.classList.add('hidden');
+      importPreviewBody.innerHTML = '';
+      importError.classList.add('hidden');
+      importError.textContent = '';
+    });
 
     const STORAGE_KEY = 'handyvertrag-contracts';
 
