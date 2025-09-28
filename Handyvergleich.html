@@ -1,1 +1,400 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handyvertrag-Rechner</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      --bg: #f4f6fb;
+      --card: #ffffffcc;
+      --primary: #2f59d1;
+      --primary-dark: #1f3d91;
+      --border: #d9dce5;
+      --text-muted: #5e6471;
+    }
 
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(160deg, #e5ecff 0%, #f7f8ff 35%, #ffffff 100%);
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px 64px;
+      color: #1b1f2a;
+    }
+
+    main {
+      width: min(1100px, 100%);
+      display: grid;
+      gap: 32px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(2.1rem, 1.5rem + 1.8vw, 2.8rem);
+      font-weight: 700;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: var(--text-muted);
+      max-width: 720px;
+    }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      border-radius: 20px;
+      box-shadow: 0 24px 50px -28px rgba(47, 89, 209, 0.4);
+      border: 1px solid var(--border);
+      padding: 24px;
+    }
+
+    form {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    @media (min-width: 720px) {
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    input, select {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 1rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(47, 89, 209, 0.2);
+    }
+
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--primary);
+      color: white;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px -18px var(--primary);
+      background: var(--primary-dark);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding-bottom: 10px;
+    }
+
+    tbody td {
+      padding: 16px 0;
+      border-top: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+
+    tbody tr.highlight {
+      background: rgba(47, 89, 209, 0.08);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      background: rgba(47, 89, 209, 0.12);
+      color: var(--primary-dark);
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .summary {
+      display: grid;
+      gap: 16px;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: rgba(47, 89, 209, 0.08);
+      font-weight: 600;
+    }
+
+    .empty {
+      padding: 32px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Handyvertrag-Rechner</h1>
+      <p>Vergleiche bequem verschiedene Handyverträge, indem du ihre Standardkosten und Laufzeiten einträgst. Die Übersicht zeigt dir die wichtigsten Kennzahlen auf einen Blick.</p>
+    </header>
+
+    <section class="card">
+      <h2>Vertrag anlegen</h2>
+      <form id="contract-form">
+        <div class="grid two">
+          <label>
+            Anbieter
+            <input type="text" name="provider" placeholder="z.B. Telekom" required />
+          </label>
+          <label>
+            Tarifname
+            <input type="text" name="plan" placeholder="z.B. Magenta Mobil" required />
+          </label>
+        </div>
+        <div class="grid three">
+          <label>
+            Monatliche Kosten (€)
+            <input type="number" name="monthly" step="0.01" min="0" required />
+          </label>
+          <label>
+            Einmalige Kosten (€)
+            <input type="number" name="upfront" step="0.01" min="0" value="0" />
+          </label>
+          <label>
+            Laufzeit (Monate)
+            <input type="number" name="duration" min="1" value="24" required />
+          </label>
+        </div>
+        <div class="grid two">
+          <label>
+            Datenvolumen (GB)
+            <input type="number" name="data" min="0" step="0.1" placeholder="z.B. 20" />
+          </label>
+          <label>
+            Minuten/SMS Flat
+            <select name="flat">
+              <option value="ja">Ja</option>
+              <option value="nein">Nein</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <label>
+            Notizen
+            <input type="text" name="notes" placeholder="z.B. inkl. EU-Roaming" />
+          </label>
+        </div>
+        <button type="submit">Vertrag hinzufügen</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Überblick</h2>
+      <div id="overview">
+        <p class="empty">Noch keine Verträge eingetragen.</p>
+      </div>
+    </section>
+  </main>
+
+  <template id="table-template">
+    <div class="grid">
+      <div class="summary">
+        <div class="summary-item">
+          <span>Günstigste monatliche Belastung</span>
+          <span id="lowest-monthly"></span>
+        </div>
+        <div class="summary-item">
+          <span>Niedrigste Gesamtkosten</span>
+          <span id="lowest-total"></span>
+        </div>
+        <div class="summary-item">
+          <span>Durchschnittliche monatliche Kosten</span>
+          <span id="average-monthly"></span>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Anbieter & Tarif</th>
+              <th>Monatlich</th>
+              <th>Einmalig</th>
+              <th>Laufzeit</th>
+              <th>Gesamtkosten</th>
+              <th>Effektiv / Monat</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="contract-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <template id="row-template">
+    <tr>
+      <td>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <strong class="name"></strong>
+          <span class="tag data"></span>
+        </div>
+      </td>
+      <td class="monthly"></td>
+      <td class="upfront"></td>
+      <td class="duration"></td>
+      <td class="total"></td>
+      <td class="effective"></td>
+      <td class="notes"></td>
+    </tr>
+  </template>
+
+  <script>
+    const form = document.getElementById('contract-form');
+    const overview = document.getElementById('overview');
+    const tableTemplate = document.getElementById('table-template');
+    const rowTemplate = document.getElementById('row-template');
+
+    const contracts = [];
+
+    const euro = new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR',
+    });
+
+    function render() {
+      overview.innerHTML = '';
+
+      if (!contracts.length) {
+        overview.innerHTML = '<p class="empty">Noch keine Verträge eingetragen.</p>';
+        return;
+      }
+
+      const fragment = tableTemplate.content.cloneNode(true);
+      const tbody = fragment.getElementById('contract-table');
+
+      let lowestMonthly = { value: Infinity, row: null };
+      let lowestTotal = { value: Infinity, row: null };
+      let monthlySum = 0;
+
+      contracts.forEach(contract => {
+        const row = rowTemplate.content.cloneNode(true);
+        const tr = row.querySelector('tr');
+
+        const name = row.querySelector('.name');
+        name.textContent = `${contract.provider} – ${contract.plan}`;
+
+        const dataTag = row.querySelector('.data');
+        const dataText = contract.data ? `${contract.data} GB` : 'Datenvolumen n. a.';
+        dataTag.textContent = `${dataText}${contract.flat === 'ja' ? ' · Allnet-Flat' : ''}`;
+
+        row.querySelector('.monthly').textContent = euro.format(contract.monthly);
+        row.querySelector('.upfront').textContent = euro.format(contract.upfront);
+        row.querySelector('.duration').textContent = `${contract.duration} Monate`;
+        row.querySelector('.total').textContent = euro.format(contract.total);
+        row.querySelector('.effective').textContent = euro.format(contract.effective);
+        row.querySelector('.notes').textContent = contract.notes || '—';
+
+        tbody.appendChild(row);
+
+        monthlySum += contract.effective;
+
+        if (contract.effective < lowestMonthly.value) {
+          lowestMonthly = { value: contract.effective, row: tr };
+        }
+
+        if (contract.total < lowestTotal.value) {
+          lowestTotal = { value: contract.total, row: tr };
+        }
+      });
+
+      const lowestMonthlyEl = fragment.getElementById('lowest-monthly');
+      const lowestTotalEl = fragment.getElementById('lowest-total');
+      const avgMonthlyEl = fragment.getElementById('average-monthly');
+
+      lowestMonthlyEl.textContent = euro.format(lowestMonthly.value);
+      lowestTotalEl.textContent = euro.format(lowestTotal.value);
+      avgMonthlyEl.textContent = euro.format(monthlySum / contracts.length);
+
+      if (lowestMonthly.row) {
+        lowestMonthly.row.classList.add('highlight');
+      }
+
+      if (lowestTotal.row) {
+        lowestTotal.row.classList.add('highlight');
+      }
+
+      overview.appendChild(fragment);
+    }
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const formData = new FormData(form);
+
+      const monthly = Number(formData.get('monthly')) || 0;
+      const upfront = Number(formData.get('upfront')) || 0;
+      const duration = Number(formData.get('duration')) || 0;
+
+      const total = monthly * duration + upfront;
+      const effective = total / duration;
+
+      contracts.push({
+        provider: formData.get('provider').trim(),
+        plan: formData.get('plan').trim(),
+        monthly,
+        upfront,
+        duration,
+        data: formData.get('data'),
+        flat: formData.get('flat'),
+        notes: formData.get('notes').trim(),
+        total,
+        effective,
+      });
+
+      form.reset();
+      render();
+    });
+  </script>
+</body>
+</html>
