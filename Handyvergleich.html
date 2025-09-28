@@ -80,6 +80,18 @@
       font-size: 0.95rem;
     }
 
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .checkbox-label input {
+      width: auto;
+      margin: 0;
+    }
+
     input, select {
       padding: 10px 12px;
       border-radius: 12px;
@@ -209,6 +221,12 @@
           <label>
             Laufzeit (Monate)
             <input type="number" name="duration" min="1" value="24" required />
+          </label>
+        </div>
+        <div>
+          <label class="checkbox-label">
+            <span>Anschlussgebühr (40 €)</span>
+            <input type="checkbox" name="connectionFee" />
           </label>
         </div>
         <div class="grid two">
@@ -441,7 +459,8 @@
         dataTag.textContent = `${dataText}${contract.flat === 'ja' ? ' · Allnet-Flat' : ''}`;
 
         row.querySelector('.monthly').textContent = euro.format(contract.monthly);
-        row.querySelector('.upfront').textContent = euro.format(contract.upfront);
+        const upfrontSum = (contract.upfront || 0) + (contract.connectionFeeAmount || 0);
+        row.querySelector('.upfront').textContent = euro.format(upfrontSum);
         row.querySelector('.duration').textContent = `${contract.duration} Monate`;
         row.querySelector('.total').textContent = euro.format(contract.total);
         row.querySelector('.effective').textContent = euro.format(contract.effective);
@@ -458,6 +477,13 @@
           linkEl.rel = 'noopener';
           linkEl.textContent = 'Direktlink';
           notesCell.appendChild(linkEl);
+          hasDetails = true;
+        }
+
+        if (contract.connectionFeeAmount) {
+          const feeNote = document.createElement('span');
+          feeNote.textContent = 'inkl. Anschlussgebühr';
+          notesCell.appendChild(feeNote);
           hasDetails = true;
         }
 
@@ -532,7 +558,9 @@
         }
       }
 
-      const total = monthly * duration + upfront;
+      const connectionFeeAmount = formData.get('connectionFee') ? 40 : 0;
+
+      const total = monthly * duration + upfront + connectionFeeAmount;
       const effective = total / duration;
 
       contracts.push({
@@ -548,6 +576,7 @@
         notes: (formData.get('notes') || '').trim(),
         total,
         effective,
+        connectionFeeAmount,
       });
 
       saveContracts();
