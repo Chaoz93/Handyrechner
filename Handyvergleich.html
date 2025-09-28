@@ -27,7 +27,7 @@
     }
 
     main {
-      width: min(1100px, 100%);
+      width: min(1400px, 100%);
       display: grid;
       gap: 32px;
     }
@@ -220,6 +220,21 @@
       background: rgba(47, 89, 209, 0.08);
     }
 
+    tbody tr.selectable {
+      cursor: pointer;
+      transition: background 0.2s ease, outline 0.2s ease;
+    }
+
+    tbody tr.selectable:hover {
+      background: rgba(47, 89, 209, 0.08);
+    }
+
+    tbody tr.selected {
+      outline: 2px solid var(--primary);
+      outline-offset: -2px;
+      background: rgba(47, 89, 209, 0.12);
+    }
+
     .tag {
       display: inline-flex;
       align-items: center;
@@ -265,6 +280,9 @@
 
     .table-wrapper {
       overflow-x: auto;
+      padding: 12px 16px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.55);
     }
 
     td.notes {
@@ -330,6 +348,90 @@
 
     .hidden {
       display: none !important;
+    }
+
+    .selected-contract {
+      display: grid;
+      gap: 16px;
+      padding: 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(47, 89, 209, 0.25);
+      background: rgba(47, 89, 209, 0.1);
+    }
+
+    .selected-contract-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .selected-contract-header h3 {
+      margin: 0 0 4px;
+      font-size: 1.25rem;
+    }
+
+    .selected-contract-header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .selected-contract-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .selected-contract-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .selected-field {
+      display: grid;
+      gap: 4px;
+    }
+
+    .selected-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .selected-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .selected-notes {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #1b1f2a;
+    }
+
+    .selected-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .selected-link::after {
+      content: '↗';
+      font-size: 0.85rem;
+    }
+
+    .selected-link:hover,
+    .selected-link:focus {
+      text-decoration: underline;
     }
 
     .section-actions {
@@ -590,6 +692,52 @@
           <span id="average-monthly"></span>
         </div>
       </div>
+      <section id="selected-contract" class="selected-contract hidden">
+        <div class="selected-contract-header">
+          <div>
+            <h3 id="selected-contract-title"></h3>
+            <p id="selected-contract-subtitle"></p>
+          </div>
+          <div class="selected-contract-actions">
+            <button type="button" id="selected-update">Aktualisieren</button>
+            <button type="button" class="button-secondary" id="selected-clear">Clear</button>
+          </div>
+        </div>
+        <div class="selected-contract-grid">
+          <div class="selected-field">
+            <span class="selected-label">Monatlich</span>
+            <span class="selected-value" id="selected-monthly"></span>
+          </div>
+          <div class="selected-field">
+            <span class="selected-label">Effektiv / Monat</span>
+            <span class="selected-value" id="selected-effective"></span>
+          </div>
+          <div class="selected-field">
+            <span class="selected-label">Gesamtkosten</span>
+            <span class="selected-value" id="selected-total"></span>
+          </div>
+          <div class="selected-field">
+            <span class="selected-label">Einmalig</span>
+            <span class="selected-value" id="selected-upfront"></span>
+          </div>
+          <div class="selected-field">
+            <span class="selected-label">Laufzeit</span>
+            <span class="selected-value" id="selected-duration"></span>
+          </div>
+          <div class="selected-field">
+            <span class="selected-label">Handy</span>
+            <span class="selected-value" id="selected-device"></span>
+          </div>
+          <div class="selected-field">
+            <span class="selected-label">Bonus</span>
+            <span class="selected-value" id="selected-bonus"></span>
+          </div>
+        </div>
+        <div>
+          <a id="selected-link" class="selected-link" href="#" target="_blank" rel="noopener"></a>
+        </div>
+        <p id="selected-notes" class="selected-notes"></p>
+      </section>
       <div class="table-controls">
         <label for="sort-select">Sortieren nach</label>
         <select id="sort-select">
@@ -1381,17 +1529,23 @@
     });
 
     let editingIndex = null;
+    let selectedIndex = null;
 
     function render() {
       overview.innerHTML = '';
 
       if (!contracts.length) {
         overview.innerHTML = '<p class="empty">Noch keine Verträge eingetragen.</p>';
+        selectedIndex = null;
         return;
       }
 
       if (!VALID_SORTS.has(currentSort)) {
         currentSort = SORT_DEFAULT;
+      }
+
+      if (selectedIndex !== null && (selectedIndex < 0 || selectedIndex >= contracts.length)) {
+        selectedIndex = null;
       }
 
       const contractEntries = contracts.map((contract, index) => {
@@ -1404,6 +1558,20 @@
       const fragment = tableTemplate.content.cloneNode(true);
       const tbody = fragment.getElementById('contract-table');
       const sortSelect = fragment.getElementById('sort-select');
+      const selectedContainer = fragment.getElementById('selected-contract');
+      const selectedTitleEl = fragment.getElementById('selected-contract-title');
+      const selectedSubtitleEl = fragment.getElementById('selected-contract-subtitle');
+      const selectedMonthlyEl = fragment.getElementById('selected-monthly');
+      const selectedEffectiveEl = fragment.getElementById('selected-effective');
+      const selectedTotalEl = fragment.getElementById('selected-total');
+      const selectedUpfrontEl = fragment.getElementById('selected-upfront');
+      const selectedDurationEl = fragment.getElementById('selected-duration');
+      const selectedDeviceEl = fragment.getElementById('selected-device');
+      const selectedBonusEl = fragment.getElementById('selected-bonus');
+      const selectedLinkEl = fragment.getElementById('selected-link');
+      const selectedNotesEl = fragment.getElementById('selected-notes');
+      const selectedUpdateButton = fragment.getElementById('selected-update');
+      const selectedClearButton = fragment.getElementById('selected-clear');
 
       if (sortSelect) {
         sortSelect.value = currentSort;
@@ -1423,8 +1591,14 @@
         const row = rowTemplate.content.cloneNode(true);
         const tr = row.querySelector('tr');
 
+        tr.classList.add('selectable');
+
         if (index === editingIndex) {
           tr.classList.add('editing');
+        }
+
+        if (index === selectedIndex) {
+          tr.classList.add('selected');
         }
 
         const name = row.querySelector('.name');
@@ -1460,6 +1634,17 @@
           deleteButton.addEventListener('click', () => deleteContract(index));
         }
 
+        tr.addEventListener('click', event => {
+          if (event.target.closest('button') || event.target.closest('a')) {
+            return;
+          }
+
+          if (selectedIndex !== index) {
+            selectedIndex = index;
+            render();
+          }
+        });
+
         tbody.appendChild(row);
 
         monthlySum += contract.effective;
@@ -1487,6 +1672,111 @@
 
       if (lowestTotal.row) {
         lowestTotal.row.classList.add('highlight');
+      }
+
+      const selectedContract =
+        selectedIndex !== null ? contracts[selectedIndex] || null : null;
+
+      if (selectedContainer) {
+        const hasSelection = Boolean(selectedContract);
+        selectedContainer.classList.toggle('hidden', !hasSelection);
+
+        if (hasSelection && selectedContract) {
+          const provider = selectedContract.provider || 'Unbekannter Anbieter';
+          const plan = selectedContract.plan || 'Unbekannter Tarif';
+          if (selectedTitleEl) {
+            selectedTitleEl.textContent = `${provider} – ${plan}`;
+          }
+
+          if (selectedSubtitleEl) {
+            const subtitleParts = [];
+            const dataText = selectedContract.data
+              ? `${selectedContract.data} GB`
+              : 'Datenvolumen n. a.';
+            subtitleParts.push(dataText);
+
+            if (selectedContract.flat === 'ja') {
+              subtitleParts.push('Allnet-Flat');
+            }
+
+            if (selectedContract.device) {
+              subtitleParts.push(`Handy: ${selectedContract.device}`);
+            }
+
+            selectedSubtitleEl.textContent = subtitleParts.join(' · ');
+          }
+
+          if (selectedMonthlyEl) {
+            selectedMonthlyEl.textContent = euro.format(selectedContract.monthly || 0);
+          }
+
+          if (selectedEffectiveEl) {
+            selectedEffectiveEl.textContent = euro.format(selectedContract.effective || 0);
+          }
+
+          if (selectedTotalEl) {
+            selectedTotalEl.textContent = euro.format(selectedContract.total || 0);
+          }
+
+          if (selectedUpfrontEl) {
+            const upfrontSum = (selectedContract.upfront || 0) + (selectedContract.connectionFeeAmount || 0);
+            selectedUpfrontEl.textContent = euro.format(upfrontSum);
+          }
+
+          if (selectedDurationEl) {
+            selectedDurationEl.textContent = selectedContract.duration
+              ? `${selectedContract.duration} Monate`
+              : '—';
+          }
+
+          if (selectedDeviceEl) {
+            selectedDeviceEl.textContent = selectedContract.device || '—';
+          }
+
+          if (selectedBonusEl) {
+            const bonusValue = Number(selectedContract.bonus) || 0;
+            selectedBonusEl.textContent = bonusValue
+              ? `− ${euro.format(bonusValue)}`
+              : '—';
+          }
+
+          if (selectedNotesEl) {
+            if (selectedContract.notes) {
+              selectedNotesEl.textContent = selectedContract.notes;
+              selectedNotesEl.classList.remove('hidden');
+            } else {
+              selectedNotesEl.textContent = '';
+              selectedNotesEl.classList.add('hidden');
+            }
+          }
+
+          if (selectedLinkEl) {
+            if (selectedContract.link) {
+              selectedLinkEl.href = selectedContract.link;
+              selectedLinkEl.textContent = 'Zum Angebot';
+              selectedLinkEl.classList.remove('hidden');
+            } else {
+              selectedLinkEl.removeAttribute('href');
+              selectedLinkEl.textContent = '';
+              selectedLinkEl.classList.add('hidden');
+            }
+          }
+        }
+      }
+
+      if (selectedUpdateButton) {
+        selectedUpdateButton.addEventListener('click', () => {
+          if (selectedIndex !== null) {
+            startEdit(selectedIndex);
+          }
+        });
+      }
+
+      if (selectedClearButton) {
+        selectedClearButton.addEventListener('click', () => {
+          selectedIndex = null;
+          render();
+        });
       }
 
       overview.appendChild(fragment);
@@ -1526,6 +1816,7 @@
       }
 
       editingIndex = index;
+      selectedIndex = index;
 
       if (contract.device && !devices.includes(contract.device)) {
         devices.push(contract.device);
@@ -1562,6 +1853,14 @@
           resetFormState();
         } else if (editingIndex > index) {
           editingIndex -= 1;
+        }
+      }
+
+      if (selectedIndex !== null) {
+        if (selectedIndex === index) {
+          selectedIndex = null;
+        } else if (selectedIndex > index) {
+          selectedIndex -= 1;
         }
       }
 
