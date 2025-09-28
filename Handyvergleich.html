@@ -135,6 +135,53 @@
       box-shadow: none;
     }
 
+    .button-secondary {
+      background: #e1e4eb;
+      color: #1b1f2a;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .button-secondary:hover {
+      background: #c9ceda;
+      color: #1b1f2a;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .button-ghost {
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid rgba(47, 89, 209, 0.6);
+      box-shadow: none;
+    }
+
+    .button-ghost:hover {
+      background: rgba(47, 89, 209, 0.12);
+      color: var(--primary-dark);
+    }
+
+    .button-small {
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    td.actions {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    tbody tr.editing {
+      box-shadow: inset 0 0 0 2px rgba(47, 89, 209, 0.25);
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -295,20 +342,6 @@
       border-bottom: none;
     }
 
-    .button-secondary {
-      background: #e1e4eb;
-      color: #1b1f2a;
-      box-shadow: none;
-      transform: none;
-    }
-
-    .button-secondary:hover {
-      background: #c9ceda;
-      color: #1b1f2a;
-      box-shadow: none;
-      transform: none;
-    }
-
     .error-message {
       color: #c62828;
       background: rgba(198, 40, 40, 0.12);
@@ -400,7 +433,10 @@
             <input type="text" name="notes" placeholder="z.B. inkl. EU-Roaming" />
           </label>
         </div>
-        <button type="submit">Vertrag hinzufügen</button>
+        <div class="form-actions">
+          <button type="button" class="button-secondary hidden" id="cancel-edit">Abbrechen</button>
+          <button type="submit" id="submit-button">Vertrag hinzufügen</button>
+        </div>
       </form>
     </section>
 
@@ -474,6 +510,7 @@
               <th>Gesamtkosten</th>
               <th>Effektiv / Monat</th>
               <th>Details</th>
+              <th>Aktionen</th>
             </tr>
           </thead>
           <tbody id="contract-table"></tbody>
@@ -498,6 +535,9 @@
       <td class="total"></td>
       <td class="effective"></td>
       <td class="notes"></td>
+      <td class="actions">
+        <button type="button" class="button-ghost button-small edit-button">Bearbeiten</button>
+      </td>
     </tr>
   </template>
 
@@ -509,6 +549,8 @@
     const deviceSelect = document.getElementById('device-select');
     const newDeviceWrapper = document.getElementById('new-device-wrapper');
     const newDeviceInput = document.getElementById('new-device-input');
+    const submitButton = document.getElementById('submit-button');
+    const cancelEditButton = document.getElementById('cancel-edit');
 
     const importOpenButton = document.getElementById('open-import');
     const importOverlay = document.getElementById('import-overlay');
@@ -630,6 +672,9 @@
     }
 
     function applyImportToForm(data) {
+      resetFormState();
+      render();
+
       form.elements['provider'].value = data.anbieter || '';
       form.elements['plan'].value = data.tarif || '';
       form.elements['monthly'].value = toNumberString(data.monatlich);
@@ -824,13 +869,12 @@
       showNewDeviceInput(deviceSelect.value === '__new__');
     });
 
-    populateDeviceOptions();
-    showNewDeviceInput(false);
-
     const euro = new Intl.NumberFormat('de-DE', {
       style: 'currency',
       currency: 'EUR',
     });
+
+    let editingIndex = null;
 
     function render() {
       overview.innerHTML = '';
@@ -847,10 +891,14 @@
       let lowestTotal = { value: Infinity, row: null };
       let monthlySum = 0;
 
-      contracts.forEach(contract => {
+      contracts.forEach((contract, index) => {
         updateContractCalculations(contract);
         const row = rowTemplate.content.cloneNode(true);
         const tr = row.querySelector('tr');
+
+        if (index === editingIndex) {
+          tr.classList.add('editing');
+        }
 
         const name = row.querySelector('.name');
         name.textContent = `${contract.provider} – ${contract.plan}`;
@@ -907,6 +955,11 @@
           notesCell.textContent = '—';
         }
 
+        const editButton = row.querySelector('.edit-button');
+        if (editButton) {
+          editButton.addEventListener('click', () => startEdit(index));
+        }
+
         tbody.appendChild(row);
 
         monthlySum += contract.effective;
@@ -938,6 +991,60 @@
 
       overview.appendChild(fragment);
     }
+
+    function resetFormState(selectedDevice = '') {
+      form.reset();
+      editingIndex = null;
+      submitButton.textContent = 'Vertrag hinzufügen';
+      cancelEditButton.classList.add('hidden');
+      populateDeviceOptions(selectedDevice);
+      showNewDeviceInput(false);
+      newDeviceInput.value = '';
+    }
+
+    function fillFormWithContract(contract) {
+      form.elements['provider'].value = contract.provider || '';
+      form.elements['plan'].value = contract.plan || '';
+      form.elements['monthly'].value = contract.monthly ?? '';
+      form.elements['upfront'].value = contract.upfront ?? '';
+      form.elements['duration'].value = contract.duration ?? '';
+      form.elements['bonus'].value = contract.bonus ?? '';
+      form.elements['connectionFee'].checked = (contract.connectionFeeAmount || 0) > 0;
+      form.elements['data'].value = contract.data ?? '';
+      form.elements['flat'].value = contract.flat === 'nein' ? 'nein' : 'ja';
+      form.elements['device'].value = contract.device || '';
+      form.elements['link'].value = contract.link || '';
+      form.elements['notes'].value = contract.notes || '';
+      showNewDeviceInput(false);
+      newDeviceInput.value = '';
+    }
+
+    function startEdit(index) {
+      const contract = contracts[index];
+      if (!contract) {
+        return;
+      }
+
+      editingIndex = index;
+
+      if (contract.device && !devices.includes(contract.device)) {
+        devices.push(contract.device);
+        devices.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+        saveDevices();
+      }
+
+      populateDeviceOptions(contract.device || '');
+      fillFormWithContract(contract);
+      submitButton.textContent = 'Vertrag aktualisieren';
+      cancelEditButton.classList.remove('hidden');
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      render();
+    }
+
+    cancelEditButton.addEventListener('click', () => {
+      resetFormState();
+      render();
+    });
 
     form.addEventListener('submit', event => {
       event.preventDefault();
@@ -983,17 +1090,23 @@
       };
 
       updateContractCalculations(newContract);
-      contracts.push(newContract);
+      const isEdit = editingIndex !== null;
+
+      if (isEdit) {
+        contracts[editingIndex] = { ...contracts[editingIndex], ...newContract };
+      } else {
+        contracts.push(newContract);
+      }
 
       saveContracts();
 
-      form.reset();
-      populateDeviceOptions(device);
-      showNewDeviceInput(false);
+      const keepDeviceSelection = isEdit ? '' : newContract.device || '';
+      resetFormState(keepDeviceSelection);
 
       render();
     });
 
+    resetFormState();
     render();
   </script>
 </body>
